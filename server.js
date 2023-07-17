@@ -7,6 +7,7 @@ require("dotenv").config();
 const connectDB = require("./db/connectDB");
 const authRouter = require("./routers/authRouter");
 const productRouter = require("./routers/productRouter");
+const handleError = require("./middlewares/common/handleError");
 
 // variable
 const port = process.env.PORT;
@@ -27,6 +28,7 @@ app.use("/product", productRouter);
 // 404 handler
 
 // error handler
+app.use(handleError);
 
 // Run the server
 app.listen(port, () => {
