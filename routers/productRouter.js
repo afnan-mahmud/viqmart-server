@@ -58,7 +58,7 @@ const productRouter = express.Router();
 productRouter.get("/allproduct", getAllProducts);
 productRouter.get("/:id", getSingleProduct);
 productRouter.post("/upload", upload.array("image", 5), uploadProduct);
-productRouter.patch("/:id", updateProduct);
+productRouter.patch("/:id", upload.array("image", 5), updateProduct);
 productRouter.delete("/:id", deleteProduct);
 
 module.exports = productRouter;

@@ -1,5 +1,6 @@
 // External Imports
 const path = require("path");
+const fs = require("fs");
 
 // Internal Imports
 const Product = require("../db/model/uploadProductModel");
@@ -27,6 +28,14 @@ async function getSingleProduct(req, res, next) {
     const singleProduct = await Product.find({ _id: req.params.id }).select(
       "-__v"
     );
+    if (!singleProduct) {
+      return res.status(404).json({
+        status: "failed",
+        error: {
+          message: "Product not found",
+        },
+      });
+    }
     res.status(200).json({
       status: "successfull",
       total: singleProduct.length,
@@ -55,6 +64,7 @@ async function uploadProduct(req, res, next) {
     return res.status(201).json({
       status: "successfull",
       message: "Product successfully uploaded.",
+      data: newProduct,
     });
   } catch (err) {
     console.log(err);
@@ -70,11 +80,21 @@ async function uploadProduct(req, res, next) {
 async function updateProduct(req, res, next) {
   const productId = req.params.id;
   const updateData = req.body;
+  console.log(req.files);
 
   try {
-    const updatedProduct = await Product.findOneAndUpdate(
-      { _id: productId },
-      updateData,
+    if (req.files) {
+      const images = req.files.map((item) => {
+        const image = item.path;
+        const relativeUrl = path.relative(__dirname, image);
+        return "/" + relativeUrl;
+      });
+      updateData.image = images;
+    }
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      { $set: updateData },
       { new: true }
     );
 
@@ -106,7 +126,7 @@ async function deleteProduct(req, res, next) {
   const productId = req.params.id;
 
   try {
-    const deleteProduct = Product.findOneAndDelete({ _id: productId });
+    const deleteProduct = await Product.findByIdAndDelete(productId);
 
     if (!deleteProduct) {
       return res.status(404).json({
@@ -117,9 +137,19 @@ async function deleteProduct(req, res, next) {
       });
     }
 
-    return res.status(200).json({
-      status: "successfull",
-      message: "Product deleted successfully.",
+    // Delete the corresponding files from local storage
+    await deleteProduct.image.forEach((imagePath) => {
+      const filePath = path.join(__dirname, imagePath);
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.log(`Error deleting file`);
+        } else {
+          return res.status(200).json({
+            status: "successfull",
+            message: "Product deleted successfully.",
+          });
+        }
+      });
     });
   } catch (err) {
     return res.status(500).json({
